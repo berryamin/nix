@@ -32,7 +32,13 @@ public:
     Flake getFlake()
     {
         auto evalState = getEvalState();
-        return nix::getFlake(*evalState, getFlakeRef(), true);
+
+        auto flakeRef = getFlakeRef();
+
+        if (std::get_if<FlakeRef::IsPath>(&flakeRef.data))
+            updateLockFile(*evalState, flakeRef);
+
+        return nix::getFlake(*evalState, flakeRef, true);
     }
 };
 
@@ -168,14 +174,7 @@ struct CmdFlakeUpdate : FlakeCommand
 
     void run(nix::ref<nix::Store> store) override
     {
-        auto evalState = getEvalState();
-
-        auto flakeRef = getFlakeRef();
-
-        if (std::get_if<FlakeRef::IsPath>(&flakeRef.data))
-            updateLockFile(*evalState, flakeRef);
-        else
-            throw Error("cannot update lockfile of flake '%s'", flakeRef);
+        getFlake();
     }
 };
 
