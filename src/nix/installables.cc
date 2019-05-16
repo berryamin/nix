@@ -28,7 +28,7 @@ SourceExprCommand::SourceExprCommand()
         .set(&updateLockFile, false);
 }
 
-ref<EvalState> SourceExprCommand::getEvalState()
+ref<EvalState> EvalCommand::getEvalState()
 {
     if (!evalState)
         evalState = std::make_shared<EvalState>(searchPath, getStore());

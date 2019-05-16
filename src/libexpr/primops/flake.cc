@@ -410,7 +410,7 @@ LockFile::FlakeEntry dependenciesToFlakeEntry(const ResolvedFlake & resolvedFlak
     return entry;
 }
 
-static LockFile makeLockFile(EvalState & evalState, FlakeRef & flakeRef)
+static LockFile makeLockFile(EvalState & evalState, const FlakeRef & flakeRef)
 {
     ResolvedFlake resFlake = resolveFlake(evalState, flakeRef, AllowRegistry);
     LockFile::FlakeEntry entry = dependenciesToFlakeEntry(resFlake);
@@ -420,10 +420,10 @@ static LockFile makeLockFile(EvalState & evalState, FlakeRef & flakeRef)
     return lockFile;
 }
 
-void updateLockFile(EvalState & state, const FlakeUri & flakeUri)
+void updateLockFile(EvalState & state, const FlakeRef & flakeRef)
 {
     // FIXME: We are writing the lockfile to the store here! Very bad practice!
-    FlakeRef flakeRef = FlakeRef(flakeUri);
+
     if (auto refData = std::get_if<FlakeRef::IsPath>(&flakeRef.data)) {
         auto lockFile = makeLockFile(state, flakeRef);
         writeLockFile(lockFile, refData->path + "/" + flakeRef.subdir + "/flake.lock");
@@ -434,7 +434,7 @@ void updateLockFile(EvalState & state, const FlakeUri & flakeUri)
             { "-C", refData->path, "add", "--intent-to-add",
               (flakeRef.subdir == "" ? "" : flakeRef.subdir + "/") + "flake.lock" });
     } else
-        throw Error("flakeUri %s can't be updated because it is not a path", flakeUri);
+        throw Error("flake '%s' can't be updated because it is not a path", flakeRef);
 }
 
 void callFlake(EvalState & state, const ResolvedFlake & resFlake, Value & v)
@@ -499,10 +499,8 @@ static void prim_getFlake(EvalState & state, const Pos & pos, Value * * args, Va
 
 static RegisterPrimOp r2("getFlake", 1, prim_getFlake);
 
-void gitCloneFlake (std::string flakeUri, EvalState & state, Registries registries,
-    Path endDirectory)
+void gitCloneFlake(FlakeRef flakeRef, EvalState & state, Registries registries, const Path & destDir)
 {
-    FlakeRef flakeRef(flakeUri);
     flakeRef = lookupFlake(state, flakeRef, registries);
 
     std::string uri;
@@ -524,8 +522,8 @@ void gitCloneFlake (std::string flakeUri, EvalState & state, Registries registri
         }
     }
 
-    if (endDirectory != "")
-        args.push_back(endDirectory);
+    if (destDir != "")
+        args.push_back(destDir);
 
     runProgram("git", true, args);
 }
