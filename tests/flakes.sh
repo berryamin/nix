@@ -104,6 +104,13 @@ EOF
 # Test 'nix flake info'.
 nix flake info --flake-registry $registry flake1 | grep -q 'ID: *flake1'
 
+# Test 'nix flake info' on a local flake. This generates a lockfile as
+# a side effect.
+(cd $flake1 && nix flake info) | grep -q 'ID: *flake1'
+[ -e $flake1/flake.lock ]
+(cd $flake1 && nix flake info .) | grep -q 'ID: *flake1'
+nix flake info $flake1 | grep -q 'ID: *flake1'
+
 # Test 'nix flake info --json'.
 json=$(nix flake info --flake-registry $registry flake1 --json | jq .)
 [[ $(echo "$json" | jq -r .description) = 'Bla bla' ]]
